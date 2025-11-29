@@ -13,6 +13,7 @@ import ReportsPages from "./Pages/superadmin/Reports";
 import InputTransaction from "./Pages/staf/InputTransaction";
 import GajiKaryawanBendahara from "./Pages/staf/GajiKaryawanBendahara";
 import DivisiContent from "./Pages/superadmin/DivisiPage";
+import NotFound from "./Pages/NotfoundPage";
 import "yet-another-react-lightbox/styles.css";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
 export default function App() {
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="input-transaksi" element={<InputTransaction />} />
           <Route path="gaji-karyawan" element={<GajiKaryawanBendahara />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </>
   );
