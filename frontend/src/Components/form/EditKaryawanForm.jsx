@@ -1,27 +1,45 @@
 // Components/Karyawan/EditKaryawanForm.jsx
-import { Form, Input, Button } from 'antd';
-import { useEffect } from 'react';
+import { Form, Input, Button, Select } from "antd";
+import { useEffect } from "react";
 
-export default function EditKaryawanForm({ setOpen, setData, data, selected }) {
+export default function EditKaryawanForm({
+  setOpen,
+  setData,
+  data,
+  selected,
+  divisions = [],
+  onSubmit,
+}) {
   const [form] = Form.useForm();
 
   useEffect(() => {
+    // console.log(divisions);
+
     if (selected) {
       form.setFieldsValue({
         name: selected.name,
         email: selected.email,
         phone: selected.phone,
-        address: selected.address,
-        role: selected.role,
-        division: selected.division,
+        address: selected.addres,
+        role: selected.posisi,
+        division: selected.divisiId || selected.divisi?.id,
       });
     }
   }, [selected, form]);
 
   const handleSubmit = (values) => {
-    const updated = data.map((d) => (d.id === selected.id ? { ...d, ...values } : d));
+    const updated = {
+      ...selected,
+      name: values.name,
+      email: values.email,
+      phone: values.phone,
+      posisi: values.role,
+      addres: values.address,
+      divisiId: values.division,
+      divisi: divisions.find((dv) => dv.id === values.division),
+    };
 
-    setData(updated);
+    onSubmit(updated); // Kirim hanya 1 object
     setOpen(false);
   };
 
@@ -29,16 +47,12 @@ export default function EditKaryawanForm({ setOpen, setData, data, selected }) {
     <div className="bg-white p-6 rounded-xl shadow">
       <h2 className="text-xl font-semibold mb-4">Edit Karyawan</h2>
 
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-      >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         {/* Name */}
         <Form.Item
           label="Full Name"
           name="name"
-          rules={[{ required: true, message: 'Name is required' }]}
+          rules={[{ required: true, message: "Name is required" }]}
         >
           <Input placeholder="Enter name" />
         </Form.Item>
@@ -48,8 +62,8 @@ export default function EditKaryawanForm({ setOpen, setData, data, selected }) {
           label="Email"
           name="email"
           rules={[
-            { required: true, message: 'Email is required' },
-            { type: 'email', message: 'Invalid email format' },
+            { required: true, message: "Email is required" },
+            { type: "email", message: "Invalid email format" },
           ]}
         >
           <Input placeholder="Enter email" />
@@ -59,39 +73,42 @@ export default function EditKaryawanForm({ setOpen, setData, data, selected }) {
         <Form.Item
           label="Phone Number"
           name="phone"
-          rules={[{ required: true, message: 'Phone is required' }]}
+          rules={[{ required: true, message: "Phone is required" }]}
         >
           <Input placeholder="Enter phone number" />
-        </Form.Item>
-
-        {/* Address */}
-        <Form.Item
-          label="Address"
-          name="address"
-          rules={[{ required: true, message: 'Address is required' }]}
-        >
-          <Input.TextArea
-            rows={3}
-            placeholder="Enter address"
-          />
         </Form.Item>
 
         {/* Role */}
         <Form.Item
           label="Role"
           name="role"
-          rules={[{ required: true, message: 'Role is required' }]}
+          rules={[{ required: true, message: "Role is required" }]}
         >
           <Input placeholder="Enter role" />
         </Form.Item>
 
         {/* Division */}
         <Form.Item
-          label="Division"
+          label="Divisi"
           name="division"
-          rules={[{ required: true, message: 'Division is required' }]}
+          rules={[{ required: true, message: "Divisi wajib dipilih" }]}
         >
-          <Input placeholder="Enter division" />
+          <Select placeholder="Pilih divisi">
+            {divisions.map((d) => (
+              <Select.Option key={d.id} value={d.id}>
+                {d.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+
+        {/* Address */}
+        <Form.Item
+          label="Address"
+          name="address"
+          rules={[{ required: true, message: "Address is required" }]}
+        >
+          <Input.TextArea rows={3} placeholder="Enter address" />
         </Form.Item>
 
         {/* Submit Button */}

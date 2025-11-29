@@ -1,47 +1,19 @@
-import { useState } from 'react';
-import { Table, Button, Tag, Input, DatePicker } from 'antd';
-import moment from 'moment';
-import SummaryCard from '../../Components/cards/SummaryCard';
-import ReportDetailModal from '../../Components/ReportDetailModal';
-
+/* eslint-disable react-hooks/immutability */
+import { useState, useEffect } from "react";
+import { Table, Button, Tag, Input, DatePicker, Space } from "antd";
+import moment from "moment";
+import SummaryCard from "../../Components/cards/SummaryCard";
+import ReportDetailModal from "../../Components/ReportDetailModal";
+import axios from "axios";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 const { MonthPicker, RangePicker } = DatePicker;
 
-const dummyReports = [
-  {
-    id: 1,
-    staf: 'Andi Saputra',
-    divisi: 'Finance',
-    jenis: 'Pemasukan',
-    nominal: 5000000,
-    tanggal: moment('2025-11-01', 'YYYY-MM-DD'),
-    status: 'Pending',
-    catatan: 'Gaji bulan November belum dibayar sebagian',
-  },
-  {
-    id: 2,
-    staf: 'Budi Prakoso',
-    divisi: 'HRD',
-    jenis: 'Pengeluaran',
-    nominal: 1200000,
-    tanggal: moment('2025-11-03', 'YYYY-MM-DD'),
-    status: 'Approved',
-    catatan: 'Pembayaran listrik kantor bulan November',
-  },
-  {
-    id: 3,
-    staf: 'Ani Wijaya',
-    divisi: 'Operasional',
-    jenis: 'Pengeluaran',
-    nominal: 300000,
-    tanggal: moment('2025-11-04', 'YYYY-MM-DD'),
-    status: 'Rejected',
-    catatan: 'Salah input nominal',
-  },
-];
-
 export default function ReportsPages() {
-  const [reports, setReports] = useState(dummyReports);
-  const [searchText, setSearchText] = useState('');
+  const [reports, setReports] = useState([]);
+  const [searchText, setSearchText] = useState("");
   const [selectedReport, setSelectedReport] = useState(null);
   const [openModal, setOpenModal] = useState(false);
 
@@ -49,19 +21,38 @@ export default function ReportsPages() {
   const [yearFilter, setYearFilter] = useState(null);
   const [dateRange, setDateRange] = useState(null);
 
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  const fetchReports = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/reports");
+      const data = res.data.map((r) => ({
+        ...r,
+        tanggal: moment(r.tanggal), // convert to moment
+      }));
+      console.log(data);
+
+      setReports(data);
+    } catch (err) {
+      console.log("Error fetching reports", err);
+    }
+  };
+
   // Summary
   const totalReports = reports.length;
   const totalNominal = reports.reduce((sum, r) => sum + r.nominal, 0);
-  const pendingCount = reports.filter((r) => r.status === 'Pending').length;
-  const approvedCount = reports.filter((r) => r.status === 'Approved').length;
-  const rejectedCount = reports.filter((r) => r.status === 'Rejected').length;
+  const pendingCount = reports.filter((r) => r.status === "pending").length;
+  const approvedCount = reports.filter((r) => r.status === "approved").length;
+  const rejectedCount = reports.filter((r) => r.status === "rejected").length;
 
   // Filtered Data Realtime dengan log
   const filteredData = reports.filter((r) => {
     const reportDate = r.tanggal;
 
-    console.log('--- Filtering Report ---');
-    console.log('Report date:', reportDate, 'Type:', typeof reportDate);
+    console.log("--- Filtering Report ---");
+    console.log("Report date:", reportDate, "Type:", typeof reportDate);
 
     // Search filter
     const matchSearch =
@@ -69,67 +60,68 @@ export default function ReportsPages() {
       r.divisi.toLowerCase().includes(searchText.toLowerCase()) ||
       r.jenis.toLowerCase().includes(searchText.toLowerCase());
 
-    console.log('matchSearch:', matchSearch);
+    console.log("matchSearch:", matchSearch);
 
     // Month filter
-    const matchMonth = monthFilter ? reportDate.month() === monthFilter.month() : true;
-    console.log('MonthPicker value:', monthFilter, 'matchMonth:', matchMonth);
+    const matchMonth = monthFilter
+      ? reportDate.month() === monthFilter.month()
+      : true;
+    console.log("MonthPicker value:", monthFilter, "matchMonth:", matchMonth);
 
     // Year filter
-    const matchYear = yearFilter ? reportDate.year() === yearFilter.year() : true;
-    console.log('YearPicker value:', yearFilter, 'matchYear:', matchYear);
+    const matchYear = yearFilter
+      ? reportDate.year() === yearFilter.year()
+      : true;
+    console.log("YearPicker value:", yearFilter, "matchYear:", matchYear);
 
     // Range filter
     const matchRange = dateRange
-      ? reportDate.format('YYYY-MM-DD') >= dateRange[0].format('YYYY-MM-DD') &&
-        reportDate.format('YYYY-MM-DD') <= dateRange[1].format('YYYY-MM-DD')
+      ? reportDate.format("YYYY-MM-DD") >= dateRange[0].format("YYYY-MM-DD") &&
+        reportDate.format("YYYY-MM-DD") <= dateRange[1].format("YYYY-MM-DD")
       : true;
 
     return matchSearch && matchMonth && matchYear && matchRange;
   });
 
-  // Approve / Reject
-  const handleApprove = (id) => {
-    setReports(reports.map((r) => (r.id === id ? { ...r, status: 'Approved' } : r)));
-  };
-  const handleReject = (id) => {
-    setReports(reports.map((r) => (r.id === id ? { ...r, status: 'Rejected' } : r)));
-  };
-
   // Table Columns
   const columns = [
-    { title: 'Staf', dataIndex: 'staf', key: 'staf' },
-    { title: 'Divisi', dataIndex: 'divisi', key: 'divisi' },
-    { title: 'Jenis', dataIndex: 'jenis', key: 'jenis' },
+    { title: "Staf", dataIndex: "staf", key: "staf" },
+    { title: "Divisi", dataIndex: "divisi", key: "divisi" },
+    { title: "Jenis", dataIndex: "jenis", key: "jenis" },
     {
-      title: 'Nominal',
-      dataIndex: 'nominal',
-      key: 'nominal',
+      title: "Nominal",
+      dataIndex: "nominal",
+      key: "nominal",
       render: (v) => `Rp ${v.toLocaleString()}`,
     },
     {
-      title: 'Tanggal',
-      dataIndex: 'tanggal',
-      key: 'tanggal',
-      render: (date) => date.format('YYYY-MM-DD'),
+      title: "Tanggal",
+      dataIndex: "tanggal",
+      key: "tanggal",
+      render: (date) => date.format("YYYY-MM-DD"),
     },
     {
-      title: 'Bulan',
-      key: 'bulan',
-      render: (_, record) => record.tanggal.format('MMMM'),
+      title: "Bulan",
+      key: "bulan",
+      render: (_, record) => record.tanggal.format("MMMM"),
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
       render: (status) => {
-        const color = status === 'Pending' ? 'orange' : status === 'Approved' ? 'green' : 'red';
+        const color =
+          status === "pending"
+            ? "orange"
+            : status === "approved" || status === "paid"
+            ? "green"
+            : "red";
         return <Tag color={color}>{status}</Tag>;
       },
     },
     {
-      title: 'Aksi',
-      key: 'aksi',
+      title: "Aksi",
+      key: "aksi",
       render: (_, record) => (
         <div className="flex gap-2">
           <Button
@@ -141,19 +133,18 @@ export default function ReportsPages() {
           >
             Detail
           </Button>
-          {record.status === 'Pending' && (
+
+          {/* Tombol approve/reject hanya untuk transaksi, bukan gaji */}
+          {record.status === "pending" && record.jenis !== "Gaji" && (
             <>
               <Button
                 type="primary"
-                style={{ backgroundColor: 'green', borderColor: 'green' }}
+                style={{ backgroundColor: "green", borderColor: "green" }}
                 onClick={() => handleApprove(record.id)}
               >
                 Approve
               </Button>
-              <Button
-                danger
-                onClick={() => handleReject(record.id)}
-              >
+              <Button danger onClick={() => handleReject(record.id)}>
                 Reject
               </Button>
             </>
@@ -163,9 +154,66 @@ export default function ReportsPages() {
     },
   ];
 
+  // Approve / Reject
+  const handleApprove = async (id, jenis) => {
+    const realId = Number(id.split("-")[1]);
+
+    await axios.put(`http://localhost:5000/api/reports/approve/${realId}`, {
+      jenis, // "Gaji" atau "Transaksi"
+    });
+
+    fetchReports(); // refresh data
+  };
+
+  const handleReject = async (id, jenis) => {
+    const realId = Number(id.split("-")[1]);
+
+    await axios.put(`http://localhost:5000/api/reports/reject/${realId}`, {
+      jenis,
+    });
+
+    fetchReports();
+  };
+  // Export PDF
+  const exportPDF = () => {
+    const doc = new jsPDF();
+
+    // autoTable sekarang dipanggil dari autoTable(), bukan doc.autoTable()
+    autoTable(doc, {
+      head: [["Staf", "Divisi", "Jenis", "Nominal", "Tanggal", "Status"]],
+      body: filteredData.map((r) => [
+        r.staf,
+        r.divisi,
+        r.jenis,
+        r.nominal.toLocaleString(),
+        r.tanggal.format("YYYY-MM-DD"),
+        r.status,
+      ]),
+    });
+
+    doc.save("reports.pdf");
+  };
+  // Export Excel
+  const exportExcel = () => {
+    const wsData = filteredData.map((r) => ({
+      Staf: r.staf,
+      Divisi: r.divisi,
+      Jenis: r.jenis,
+      Nominal: r.nominal,
+      Tanggal: r.tanggal.format("YYYY-MM-DD"),
+      Status: r.status,
+    }));
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    XLSX.utils.book_append_sheet(wb, ws, "Laporan");
+    XLSX.writeFile(wb, `laporan_${moment().format("YYYYMMDD_HHmmss")}.xlsx`);
+  };
+
   return (
     <div className="p-6">
-      <h1 className="text-3xl font-bold text-indigo-600 mb-5">Reports / Laporan</h1>
+      <h1 className="text-3xl font-bold text-indigo-600 mb-5">
+        Reports / Laporan
+      </h1>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -209,7 +257,7 @@ export default function ReportsPages() {
           placeholder="Pilih Bulan"
           value={monthFilter}
           onChange={(date) => {
-            console.log('MonthPicker onChange:', date, 'Type:', typeof date);
+            console.log("MonthPicker onChange:", date, "Type:", typeof date);
             setMonthFilter(date ? moment(date) : null);
           }}
           format="MMMM YYYY"
@@ -219,17 +267,27 @@ export default function ReportsPages() {
           placeholder="Pilih Tahun"
           value={yearFilter}
           onChange={(date) => {
-            console.log('YearPicker onChange:', date, 'Type:', typeof date);
+            console.log("YearPicker onChange:", date, "Type:", typeof date);
             setYearFilter(date ? moment(date) : null);
           }}
         />
         <RangePicker
           value={dateRange}
           onChange={(dates) => {
-            console.log('RangePicker onChange:', dates);
+            console.log("RangePicker onChange:", dates);
             if (dates) {
-              console.log('Start date type:', typeof dates[0], 'value:', dates[0]);
-              console.log('End date type:', typeof dates[1], 'value:', dates[1]);
+              console.log(
+                "Start date type:",
+                typeof dates[0],
+                "value:",
+                dates[0]
+              );
+              console.log(
+                "End date type:",
+                typeof dates[1],
+                "value:",
+                dates[1]
+              );
             }
             setDateRange(dates);
           }}
@@ -237,12 +295,21 @@ export default function ReportsPages() {
         />
       </div>
 
+      <Space className="mb-4">
+        <Button type="primary" onClick={exportPDF}>
+          Export PDF
+        </Button>
+        <Button type="default" onClick={exportExcel}>
+          Export Excel
+        </Button>
+      </Space>
+
       {/* Table */}
       <Table
         columns={columns}
         dataSource={filteredData}
         rowKey="id"
-        className="bg-white p-4 rounded-xl shadow"
+        pagination={{ pageSize: 10 }}
       />
 
       {/* Modal Detail */}

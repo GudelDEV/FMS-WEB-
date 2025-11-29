@@ -1,6 +1,6 @@
 // components/StaffSidebar.jsx
-import { useState } from 'react';
-import { Layout, Menu, Button } from 'antd';
+import { useState } from "react";
+import { Layout, Menu, Button } from "antd";
 import {
   DashboardOutlined,
   DollarOutlined,
@@ -8,9 +8,9 @@ import {
   TeamOutlined,
   SettingOutlined,
   LogoutOutlined,
-} from '@ant-design/icons';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import ConfirmModal from '../Components/modal/ConfirmModal.jsx';
+} from "@ant-design/icons";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import ConfirmModal from "../Components/modal/ConfirmModal.jsx";
 
 const { Sider } = Layout;
 
@@ -21,26 +21,26 @@ export default function StaffSidebar() {
 
   // Handler logout
   const handleLogout = () => {
-    console.log('User logged out!');
+    console.log("User logged out!");
     // contoh: hapus token/session
-    // localStorage.removeItem('token');
-    navigate('/'); // redirect ke login
+    localStorage.removeItem("token");
+    navigate("/"); // redirect ke login
     setLogoutModalOpen(false);
   };
 
   const menuItems = [
     {
-      key: '/staff/input-transaksi',
+      key: "/staff/input-transaksi",
       icon: <DollarOutlined />,
       label: <Link to="/staff/input-transaksi">Input Transaksi</Link>,
     },
     {
-      key: '/staff/gaji-karyawan',
+      key: "/staff/gaji-karyawan",
       icon: <TeamOutlined />,
       label: <Link to="/staff/gaji-karyawan">Gaji Karyawan</Link>,
     },
     {
-      key: 'logout',
+      key: "logout",
       icon: <LogoutOutlined />,
       label: (
         <Button
@@ -60,7 +60,9 @@ export default function StaffSidebar() {
         width={250}
         className="min-h-screen bg-gradient-to-b from-indigo-500 via-blue-500 to-sky-500 text-white shadow-xl"
       >
-        <div className="text-center text-2xl font-bold py-6 tracking-wide">Staff / Bendahara</div>
+        <div className="text-center text-2xl font-bold py-6 tracking-wide">
+          Staff / Bendahara
+        </div>
 
         <Menu
           theme="dark"

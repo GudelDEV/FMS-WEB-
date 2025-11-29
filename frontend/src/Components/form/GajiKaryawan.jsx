@@ -1,152 +1,207 @@
-/* eslint-disable no-unused-vars */
-// Components/Karyawan/GajiKaryawan.jsx
-import { useState, useEffect } from 'react';
-import { Button, Table, Input, Badge, Form, Card } from 'antd';
+/* eslint-disable react-hooks/immutability */
+import {
+  Button,
+  Table,
+  Input,
+  Badge,
+  Form,
+  Card,
+  Select,
+  DatePicker,
+} from "antd";
+import axios from "axios";
+import { toast } from "react-toastify";
+import { useState, useEffect } from "react";
 
-export default function GajiKaryawan({ karyawan }) {
-  const [gajiList, setGajiList] = useState(karyawan?.gaji || []);
-
+export default function GajiKaryawan({ karyawan, staffList }) {
   const [form] = Form.useForm();
+  const [gajiList, setGajiList] = useState([]);
+  console.log(karyawan);
 
-  // Default gaji pokok jika sudah pernah diset pada karyawan
-  const [gajiPokok, setGajiPokok] = useState(karyawan?.gajiPokok || 0);
+  useEffect(() => {
+    if (karyawan?.id) {
+      fetchGaji();
+    }
+  }, [karyawan]);
 
-  const submitGaji = (values) => {
-    const total = Number(values.gajiPokok) + Number(values.dinasLuarKota || 0) + Number(values.tambahanLain || 0);
+  // Submit gaji → dikirim ke backend
+  const submitGaji = async (values) => {
+    try {
+      // Validasi tanggal
+      if (!values.tanggal) {
+        toast.error("Tanggal/bulan gaji wajib diisi");
+        return;
+      }
 
-    const newData = {
-      id: Date.now(),
-      bulan: values.bulan,
-      gajiPokok: Number(values.gajiPokok),
-      dinasLuarKota: Number(values.dinasLuarKota || 0),
-      tambahanLain: Number(values.tambahanLain || 0),
-      total,
-      status: 'Belum Dibayar',
-      bukti: null,
-    };
+      const total =
+        Number(values.gajiPokok) +
+        Number(values.dinasLuarKota || 0) -
+        Number(values.potongan || 0);
 
-    // Simpan ke list
-    setGajiList([...gajiList, newData]);
+      const payload = {
+        karyawanId: karyawan.id,
+        staffId: values.staffId,
+        gajiPokok: Number(values.gajiPokok),
+        DinasLuarKota: Number(values.dinasLuarKota || 0),
+        potongan: Number(values.potongan || 0),
+        totalGaji: total,
+        month: values.tanggal.toISOString(), // ← FIX DI SINI
+      };
 
-    // Simpan gaji pokok baru (jika diubah)
-    setGajiPokok(Number(values.gajiPokok));
+      const res = await axios.post(
+        "http://localhost:5000/api/gaji/create",
+        payload
+      );
 
-    form.resetFields();
+      setGajiList((prev) => [...prev, res.data.data]);
+      toast.success("Data gaji karyawan berhasil ditambahkan");
+      form.resetFields();
+    } catch (error) {
+      console.error("Error submit gaji:", error);
+      const msg =
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        "Terjadi kesalahan saat menyimpan data gaji";
+
+      toast.error(msg);
+    }
   };
 
+  const fetchGaji = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:5000/api/gaji/${karyawan.id}`
+      );
+      setGajiList(res.data.data || []);
+    } catch (err) {
+      console.log(err);
+      toast.error("Gagal mengambil data gaji");
+    }
+  };
+
+  /** TABLE */
   const columns = [
-    { title: 'Bulan', dataIndex: 'bulan' },
-    { title: 'Gaji Pokok', dataIndex: 'gajiPokok', render: (v) => `Rp ${v.toLocaleString()}` },
-    { title: 'Dinas Luar Kota', dataIndex: 'dinasLuarKota', render: (v) => `Rp ${v.toLocaleString()}` },
-    { title: 'Tambahan Lain', dataIndex: 'tambahanLain', render: (v) => `Rp ${v.toLocaleString()}` },
-    { title: 'Total', dataIndex: 'total', render: (v) => <b>Rp {v.toLocaleString()}</b> },
     {
-      title: 'Status',
-      dataIndex: 'status',
+      title: "Bulan",
+      dataIndex: "month",
+      render: (v) =>
+        new Date(v).toLocaleDateString("id-ID", {
+          month: "long",
+          year: "numeric",
+        }),
+    },
+    {
+      title: "Total Gaji",
+      dataIndex: "totalGaji",
+      render: (v) => <b>Rp {v.toLocaleString()}</b>,
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
       render: (status) =>
-        status === 'Dibayar' ? (
-          <Badge
-            status="success"
-            text="Dibayar"
-          />
+        status === "paid" ? (
+          <Badge status="success" text="Sudah Dibayar" />
         ) : (
-          <Badge
-            status="error"
-            text="Belum Dibayar"
-          />
+          <Badge status="error" text="Belum Dibayar" />
         ),
     },
     {
-      title: 'Bukti Pembayaran',
-      dataIndex: 'bukti',
+      title: "Dibayarkan Oleh",
+      dataIndex: ["staff", "name"],
+      render: (name) =>
+        name ? <span className="font-semibold">{name}</span> : "-",
+    },
+    {
+      title: "Bukti Pembayaran",
+      dataIndex: "buktiPembayaran",
       render: (file) =>
         file ? (
           <a
-            href={`/${file}`}
+            href={`http://localhost:5000/imageBook/${file}`}
             target="_blank"
             className="text-blue-600 underline"
           >
             Lihat Bukti
           </a>
         ) : (
-          <span className="text-gray-500 italic">Belum ada bukti</span>
+          <i className="text-gray-500">Belum ada bukti</i>
         ),
     },
   ];
 
   return (
     <div>
-      <h2 className="text-xl font-semibold mb-4">Pengaturan Gaji — {karyawan?.nama}</h2>
+      <h2 className="text-xl font-semibold mb-4">
+        Pengaturan Gaji — {karyawan?.name} ({karyawan.divisi?.name})
+      </h2>
 
-      {/* Form Gaji */}
       <Card className="mb-5 shadow">
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={submitGaji}
-        >
+        <Form form={form} layout="vertical" onFinish={submitGaji}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* PILIH STAFF */}
+            <Form.Item
+              label="Pilih Staff Pembayar"
+              name="staffId"
+              rules={[{ required: true, message: "Staff wajib dipilih" }]}
+            >
+              <Select placeholder="Pilih staff yang akan membayar">
+                {staffList.map((s) => (
+                  <Select.Option key={s.id} value={s.id}>
+                    {s.name} — {s.division}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+
             {/* BULAN */}
             <Form.Item
-              label="Bulan"
-              name="bulan"
-              rules={[{ required: true, message: 'Bulan wajib diisi' }]}
+              label="Tanggal Pembayaran"
+              name="tanggal"
+              rules={[
+                { required: true, message: "Tanggal pembayaran wajib diisi" },
+              ]}
             >
-              <Input placeholder="Contoh: Januari 2025" />
+              <DatePicker style={{ width: "100%" }} />
             </Form.Item>
 
             {/* GAJI POKOK */}
             <Form.Item
               label="Gaji Pokok"
               name="gajiPokok"
-              initialValue={gajiPokok}
-              rules={[{ required: true, message: 'Gaji pokok wajib diisi' }]}
+              initialValue={karyawan.gaji}
+              rules={[{ required: true, message: "Gaji pokok wajib diisi" }]}
             >
-              <Input
-                placeholder="Masukkan gaji pokok"
-                type="number"
-              />
+              <Input type="number" placeholder="Masukkan gaji pokok" />
             </Form.Item>
 
             {/* DINAS LUAR KOTA */}
-            <Form.Item
-              label="Gaji Dinas Luar Kota"
-              name="dinasLuarKota"
-            >
-              <Input
-                placeholder="Opsional"
-                type="number"
-              />
+            <Form.Item label="Dinas Luar Kota" name="dinasLuarKota">
+              <Input type="number" placeholder="Opsional" />
             </Form.Item>
 
-            {/* TAMBAHAN LAIN */}
-            <Form.Item
-              label="Tambahan Lain"
-              name="tambahanLain"
-            >
-              <Input
-                placeholder="Opsional"
-                type="number"
-              />
+            {/* POTONGAN */}
+            <Form.Item label="Potongan" name="potongan">
+              <Input type="number" placeholder="Opsional" />
             </Form.Item>
           </div>
 
-          <Button
-            type="primary"
-            htmlType="submit"
-            block
-            className="mt-2"
-          >
-            Tambahkan Gaji Bulanan
+          <Button type="primary" htmlType="submit" block className="mt-2">
+            Buat Transaksi Gaji
           </Button>
         </Form>
       </Card>
 
-      {/* Table Gaji */}
       <Table
         rowKey="id"
         columns={columns}
         dataSource={gajiList}
+        scroll={{ x: 600 }}
+        className="mt-5"
+        pagination={{
+          pageSizeOptions: [5, 10, 20],
+          showSizeChanger: true,
+          defaultPageSize: 5,
+        }}
       />
     </div>
   );

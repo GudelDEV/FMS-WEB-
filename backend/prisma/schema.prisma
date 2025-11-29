@@ -1,0 +1,117 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// schema.prisma
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model User {
+  id         Int      @id @default(autoincrement())
+  name       String
+  username      String @unique
+  password   String
+  email      String   @unique
+  role       Role
+  divisi     Divisi?  @relation(fields: [divisiId], references: [id])
+  divisiId   Int?
+  transaksi  Transaksi[]  @relation("StaffTransaksi")
+  gajiTransaksi GajiTransaksi[] @relation("StaffGaji")
+  approvedTransaksi Transaksi[] @relation("ApprovedTransaksi")
+  isActive Boolean @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Divisi {
+  id        Int       @id @default(autoincrement())
+  name      String
+  description String
+  users     User[]
+  karyawans Karyawan[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Karyawan {
+  id        Int       @id @default(autoincrement())
+  name      String
+  phone     String
+  email    String
+  posisi  String
+  addres  String
+  divisi    Divisi    @relation(fields: [divisiId], references: [id])
+  divisiId  Int
+  gaji      Float
+  gajiTransaksi GajiTransaksi[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Transaksi {
+  id          Int       @id @default(autoincrement())
+  staff       User      @relation("StaffTransaksi", fields: [staffId], references: [id])
+  staffId     Int
+  type        TransaksiType        // pemasukan / pengeluaran
+  amount      Float
+  description String?
+  buktiTransaksi Json?
+  status      TransaksiStatus @default(pending)
+  approvedBy  User?     @relation("ApprovedTransaksi", fields: [approvedById], references: [id])
+  approvedById Int?
+  approvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model GajiTransaksi {
+  id             Int       @id @default(autoincrement())
+  karyawan       Karyawan  @relation(fields: [karyawanId], references: [id])
+  karyawanId     Int
+  staff          User      @relation("StaffGaji", fields: [staffId], references: [id])
+  staffId        Int
+  gajiPokok      Float
+  DinasLuarKota  Float
+  totalGaji      Float
+  month          DateTime
+  potongan       Float
+  status         GajiStatus @default(pending)
+
+  // ➕ Staff upload bukti
+  buktiPembayaran String?
+  tanggalDibayar  DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+
+enum Role {
+  superadmin
+  staff
+}
+
+enum TransaksiType {
+  pemasukan
+  pengeluaran
+}
+
+enum TransaksiStatus {
+  pending
+  approved
+  rejected
+  paid
+}
+
+enum GajiStatus {
+  pending
+  paid
+  rejected
+}

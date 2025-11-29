@@ -1,12 +1,18 @@
 // components/SuperHeader.jsx
-import { Layout, Avatar } from 'antd';
+import { Layout, Avatar } from "antd";
 
 const { Header } = Layout;
 
-export default function SuperHeader({ text = 'Citra (Super Admin)', image = 'C' }) {
+export default function SuperHeader({
+  text = "Citra (Super Admin)",
+  image = "C",
+  role = "Super Admin",
+}) {
   return (
     <Header className="bg-white shadow-md flex justify-between items-center px-6">
-      <h1 className="text-xl font-semibold text-white tracking-wide">Finance Management System — Super Admin</h1>
+      <h1 className="text-xl font-semibold text-white tracking-wide">
+        Finance Management System — {role}
+      </h1>
 
       <div className="flex items-center gap-3">
         <span className="font-medium text-white">{text}</span>

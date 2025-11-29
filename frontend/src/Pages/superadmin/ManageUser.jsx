@@ -1,6 +1,6 @@
 // pages/ManageUsers.jsx
-import { useState } from 'react';
-import { Button, Table, Tag, Modal, message, Input } from 'antd';
+import { useState } from "react";
+import { Button, Table, Tag, Modal, message, Input } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -8,23 +8,50 @@ import {
   TeamOutlined,
   ApartmentOutlined,
   CrownOutlined,
-} from '@ant-design/icons';
-import FormAddStaff from '../../Components/form/FormAddStaff';
+} from "@ant-design/icons";
+import FormAddStaff from "../../Components/form/FormAddStaff";
+import { useEffect } from "react";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 export default function ManageUsers() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState(null);
-  const [searchText, setSearchText] = useState('');
+  const [searchText, setSearchText] = useState("");
+  const [divisions, setDivisions] = useState([]); // state khusus untuk divisi
+  const [users, setUsers] = useState([]);
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:5000/api/users", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log(res);
+      setUsers(res.data.data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal mengambil data users");
+    }
+  };
 
-  // Dummy data untuk sementara
-  const [users, setUsers] = useState([
-    { id: 1, name: 'Budi Santoso', email: 'budi@company.com', division: 'Finance', role: 'Staff' },
-    { id: 2, name: 'Ani Wijaya', email: 'ani@company.com', division: 'HRD', role: 'Manager' },
-    { id: 3, name: 'Dedi Pratama', email: 'dedi@company.com', division: 'Operasional', role: 'Supervisor' },
-    { id: 4, name: 'Budi Nugraha', email: 'Nugraha@company.com', division: 'Finance', role: 'Staff' },
-    { id: 5, name: 'Ani Ca', email: 'ani@company.com', division: 'HRD', role: 'Manager' },
-    { id: 6, name: 'Dedi Pratama', email: 'dedi@company.com', division: 'Operasional', role: 'Supervisor' },
-  ]);
+  const fetchDivisions = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await axios.get("http://localhost:5000/api/division/select", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log(res);
+      setDivisions(res.data.data); // <-- perbaikan: simpan ke state divisions
+    } catch (err) {
+      console.error(err);
+      toast.error("Gagal mengambil data divisions");
+    }
+  };
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchDivisions();
+    fetchUsers();
+  }, []);
 
   // Hitung Statistik
   const totalUsers = users.length;
@@ -33,18 +60,18 @@ export default function ManageUsers() {
 
   // Columns tabel
   const columns = [
-    { title: 'Nama', dataIndex: 'name', key: 'name' },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
-    { title: 'Divisi', dataIndex: 'division', key: 'division' },
+    { title: "Nama", dataIndex: "name", key: "name" },
+    { title: "Email", dataIndex: "email", key: "email" },
+    { title: "Divisi", dataIndex: "division", key: "division" },
     {
-      title: 'Role',
-      dataIndex: 'role',
-      key: 'role',
+      title: "Role",
+      dataIndex: "role",
+      key: "role",
       render: (role) => <Tag color="blue">{role}</Tag>,
     },
     {
-      title: 'Action',
-      key: 'action',
+      title: "Action",
+      key: "action",
       render: (_, record) => (
         <div className="flex gap-2">
           <Button
@@ -81,21 +108,58 @@ export default function ManageUsers() {
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id) => {
-    setUsers(users.filter((u) => u.id !== id));
-    message.success('User berhasil dihapus');
+  const handleDelete = async (id) => {
+    if (!id) return toast.error("Data dengan" + id + "tidak ditemukan");
+    console.log(id);
+    try {
+      const response = await axios.delete(
+        `http://localhost:5000/api/users/${id}`
+      );
+      console.log(response);
+
+      fetchUsers();
+      toast.success("Data Berhasil Dihapus");
+    } catch (error) {
+      console.log(error);
+      toast.error("Gagagal Menghapus data");
+    }
   };
 
-  const handleSave = (values) => {
-    if (editData) {
-      setUsers(users.map((u) => (u.id === editData.id ? { ...editData, ...values } : u)));
-      message.success('User berhasil diupdate');
-    } else {
-      const newUser = { id: Date.now(), ...values };
-      setUsers([...users, newUser]);
-      message.success('User berhasil ditambahkan');
+  const handleSave = async (values) => {
+    console.log(values);
+
+    const token = localStorage.getItem("token"); // ambil token kalau pakai auth
+    try {
+      if (editData) {
+        // UPDATE user
+        const res = await axios.put(
+          `http://localhost:5000/api/users/${editData.id}`,
+          values,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        // update state users
+        setUsers(users.map((u) => (u.id === editData.id ? res.data.data : u)));
+        toast.success("User berhasil diupdate");
+      } else {
+        // ADD user
+        const res = await axios.post(
+          "http://localhost:5000/api/users",
+          values,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        console.log(res);
+        // tambahkan user baru ke state
+        setUsers([...users, res.data.data]);
+        toast.success("User berhasil ditambahkan");
+      }
+
+      // tutup modal
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Gagal menyimpan user");
     }
-    setIsModalOpen(false);
   };
 
   return (
@@ -103,11 +167,7 @@ export default function ManageUsers() {
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-blue-600">Manage Users</h1>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleAdd}
-        >
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           Add User
         </Button>
       </div>
@@ -161,7 +221,7 @@ export default function ManageUsers() {
 
       {/* MODAL */}
       <Modal
-        title={editData ? 'Edit User' : 'Add User'}
+        title={editData ? "Edit User" : "Add User"}
         open={isModalOpen}
         footer={null}
         onCancel={() => setIsModalOpen(false)}
@@ -169,6 +229,7 @@ export default function ManageUsers() {
         <FormAddStaff
           initialValues={editData}
           onSubmit={handleSave}
+          divisions={divisions}
         />
       </Modal>
     </div>

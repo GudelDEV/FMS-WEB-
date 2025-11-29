@@ -1,14 +1,22 @@
-import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Line } from 'recharts';
+import {
+  ResponsiveContainer,
+  LineChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Line,
+} from "recharts";
 
 export default function CashflowLineChart({ data }) {
   return (
     <div className="w-full h-96">
-      <ResponsiveContainer>
+      <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="name" />
+          <XAxis dataKey="divisi" /> {/* ini penting */}
           <YAxis />
-          <Tooltip />
+          <Tooltip formatter={(value) => `Rp ${value.toLocaleString()}`} />
           <Line
             type="monotone"
             dataKey="pemasukan"
